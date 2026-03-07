@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2>Create Migration Project</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label>Project Name</label>
+            <input type="text" name="project_name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Description</label>
+            <textarea name="description" class="form-control"></textarea>
+        </div>
+        <div class="mb-3">
+            <label>Start Date</label>
+            <input type="date" name="planned_start_date" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>End Date</label>
+            <input type="date" name="planned_end_date" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Project Manager</label>
+            <select name="project_manager" class="form-control">
+                <option value="">-- Select --</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Create Project</button>
+        <a href="{% url 'migrations:dashboard' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

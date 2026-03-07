@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Permissions - {{ user_obj.username }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h4 class="mb-0">
+                        <i class="bi bi-shield-lock"></i> Manage Permissions
+                    </h4>
+                    <small>User: <strong>{{ user_obj.username }}</strong> ({{ user_obj.get_role_display }})</small>
+                </div>
+                <div class="card-body">
+                    {% if user_obj.role == 'admin' %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> This user has the <strong>Administrator</strong> role and automatically has all permissions.
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- SWITCH PERMISSIONS -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="bi bi-router"></i> Switch Management Permissions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_view_switches }}
+                                                <label class="form-check-label" for="{{ form.can_view_switches.id_for_label }}">
+                                                    <strong>View Switches</strong>
+                                                    <small class="d-block text-muted">Can view switch list and details</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_add_switches }}
+                                                <label class="form-check-label" for="{{ form.can_add_switches.id_for_label }}">
+                                                    <strong>Add Switches</strong>
+                                                    <small class="d-block text-muted">Can create new switches and stacks</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_edit_switches }}
+                                                <label class="form-check-label" for="{{ form.can_edit_switches.id_for_label }}">
+                                                    <strong>Edit Switches</strong>
+                                                    <small class="d-block text-muted">Can modify existing switches</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_delete_switches }}
+                                                <label class="form-check-label" for="{{ form.can_delete_switches.id_for_label }}">
+                                                    <strong>Delete Switches</strong>
+                                                    <small class="d-block text-muted">Can soft-delete switches</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_export_switches }}
+                                                <label class="form-check-label" for="{{ form.can_export_switches.id_for_label }}">
+                                                    <strong>Export Data</strong>
+                                                    <small class="d-block text-muted">Can export switches to CSV</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_import_switches }}
+                                                <label class="form-check-label" for="{{ form.can_import_switches.id_for_label }}">
+                                                    <strong>Import Data</strong>
+                                                    <small class="d-block text-muted">Can import switches from CSV</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_restore_switches }}
+                                                <label class="form-check-label" for="{{ form.can_restore_switches.id_for_label }}">
+                                                    <strong>Restore Deleted Switches</strong>
+                                                    <small class="d-block text-muted">Can restore soft-deleted switches</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MIGRATION PERMISSIONS -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="bi bi-arrow-left-right"></i> Migration Management Permissions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_view_migrations }}
+                                                <label class="form-check-label" for="{{ form.can_view_migrations.id_for_label }}">
+                                                    <strong>View Migrations</strong>
+                                                    <small class="d-block text-muted">Can view migration dashboard and projects</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_add_migrations }}
+                                                <label class="form-check-label" for="{{ form.can_add_migrations.id_for_label }}">
+                                                    <strong>Add Migrations</strong>
+                                                    <small class="d-block text-muted">Can create migration projects and switch migrations</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_edit_migrations }}
+                                                <label class="form-check-label" for="{{ form.can_edit_migrations.id_for_label }}">
+                                                    <strong>Edit Migrations</strong>
+                                                    <small class="d-block text-muted">Can edit migration projects and switch migrations</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_delete_migrations }}
+                                                <label class="form-check-label" for="{{ form.can_delete_migrations.id_for_label }}">
+                                                    <strong>Delete Migrations</strong>
+                                                    <small class="d-block text-muted">Can delete migration projects</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_update_migration_status }}
+                                                <label class="form-check-label" for="{{ form.can_update_migration_status.id_for_label }}">
+                                                    <strong>Update Migration Status</strong>
+                                                    <small class="d-block text-muted">Can update migration status and port progress</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_manage_port_mappings }}
+                                                <label class="form-check-label" for="{{ form.can_manage_port_mappings.id_for_label }}">
+                                                    <strong>Manage Port Mappings</strong>
+                                                    <small class="d-block text-muted">Can add and edit port mappings</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_manage_issues }}
+                                                <label class="form-check-label" for="{{ form.can_manage_issues.id_for_label }}">
+                                                    <strong>Manage Issues</strong>
+                                                    <small class="d-block text-muted">Can report and update migration issues</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_manage_user_impact }}
+                                                <label class="form-check-label" for="{{ form.can_manage_user_impact.id_for_label }}">
+                                                    <strong>Manage User Impact</strong>
+                                                    <small class="d-block text-muted">Can add and edit user impact assessments</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.can_export_migration_reports }}
+                                                <label class="form-check-label" for="{{ form.can_export_migration_reports.id_for_label }}">
+                                                    <strong>Export Migration Reports</strong>
+                                                    <small class="d-block text-muted">Can export migration data and port mappings</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- QUICK ACTIONS -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Permission Presets</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 mb-2">
+                                        <button type="button" class="btn btn-outline-primary w-100" onclick="setAllSwitchPermissions(true)">
+                                            <i class="bi bi-check-all"></i> All Switch Permissions
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <button type="button" class="btn btn-outline-success w-100" onclick="setAllMigrationPermissions(true)">
+                                            <i class="bi bi-check-all"></i> All Migration Permissions
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <button type="button" class="btn btn-outline-warning w-100" onclick="setViewOnlyPermissions()">
+                                            <i class="bi bi-eye"></i> View Only (Both)
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <button type="button" class="btn btn-outline-danger w-100" onclick="clearAllPermissions()">
+                                            <i class="bi bi-x-circle"></i> Clear All
+                                        </button>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <button type="button" class="btn btn-outline-secondary w-100 btn-sm" onclick="setMigrationCoordinator()">
+                                            <i class="bi bi-person-badge"></i> Migration Coordinator
+                                        </button>
+                                        <small class="text-muted">View, Add, Port Mappings, User Impact, Export</small>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <button type="button" class="btn btn-outline-secondary w-100 btn-sm" onclick="setMigrationEngineer()">
+                                            <i class="bi bi-tools"></i> Migration Engineer
+                                        </button>
+                                        <small class="text-muted">View, Port Mappings, Issues, Update Status</small>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <button type="button" class="btn btn-outline-secondary w-100 btn-sm" onclick="setMigrationManager()">
+                                            <i class="bi bi-person-check"></i> Migration Manager
+                                        </button>
+                                        <small class="text-muted">All Migration Permissions</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'accounts:user_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Users
+                            </a>
+                            <button type="submit" class="btn btn-warning btn-lg">
+                                <i class="bi bi-save"></i> Update Permissions
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Helper functions for permission checkboxes
+
+function setAllSwitchPermissions(value) {
+    document.getElementById('{{ form.can_view_switches.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_add_switches.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_edit_switches.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_delete_switches.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_export_switches.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_import_switches.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_restore_switches.id_for_label }}').checked = value;
+}
+
+function setAllMigrationPermissions(value) {
+    document.getElementById('{{ form.can_view_migrations.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_add_migrations.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_edit_migrations.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_delete_migrations.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_manage_port_mappings.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_manage_issues.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_manage_user_impact.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_export_migration_reports.id_for_label }}').checked = value;
+    document.getElementById('{{ form.can_update_migration_status.id_for_label }}').checked = value;
+}
+
+function setViewOnlyPermissions() {
+    // Switch
+    document.getElementById('{{ form.can_view_switches.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_add_switches.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_edit_switches.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_delete_switches.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_export_switches.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_import_switches.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_restore_switches.id_for_label }}').checked = false;
+    
+    // Migration
+    document.getElementById('{{ form.can_view_migrations.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_add_migrations.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_edit_migrations.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_delete_migrations.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_manage_port_mappings.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_manage_issues.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_manage_user_impact.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_export_migration_reports.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_update_migration_status.id_for_label }}').checked = false;
+}
+
+function clearAllPermissions() {
+    setAllSwitchPermissions(false);
+    setAllMigrationPermissions(false);
+}
+
+function setMigrationCoordinator() {
+    // Coordinator: View, Add, Port Mappings, User Impact, Export
+    document.getElementById('{{ form.can_view_migrations.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_add_migrations.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_edit_migrations.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_delete_migrations.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_manage_port_mappings.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_manage_issues.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_manage_user_impact.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_export_migration_reports.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_update_migration_status.id_for_label }}').checked = false;
+}
+
+function setMigrationEngineer() {
+    // Engineer: View, Port Mappings, Issues, Update Status
+    document.getElementById('{{ form.can_view_migrations.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_add_migrations.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_edit_migrations.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_delete_migrations.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_manage_port_mappings.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_manage_issues.id_for_label }}').checked = true;
+    document.getElementById('{{ form.can_manage_user_impact.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_export_migration_reports.id_for_label }}').checked = false;
+    document.getElementById('{{ form.can_update_migration_status.id_for_label }}').checked = true;
+}
+
+function setMigrationManager() {
+    // Manager: All migration permissions
+    setAllMigrationPermissions(true);
+}
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.form-check {
+    padding-left: 1.8rem;
+}
+
+.form-check-input {
+    margin-top: 0.15rem;
+}
+
+.btn-group-sm .btn {
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

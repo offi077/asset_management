@@ -1,0 +1,556 @@
+{% extends 'base.html' %}
+
+{% block title %}Migration: {{ migration.old_switch.hostname }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'migrations:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'migrations:project_detail' migration.project.pk %}">{{ migration.project.project_name }}</a></li>
+                    <li class="breadcrumb-item active">{{ migration.old_switch.hostname }}</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-arrow-left-right"></i> Switch Migration Details</h2>
+        </div>
+        <div>
+            {% if user.is_admin or user.can_edit_migrations %}
+            <a href="{% url 'migrations:migration_edit' migration.pk %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Status and Progress Overview -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Migration Overview</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Old Switch:</strong> 
+                                <a href="{% url 'switches:detail' migration.old_switch.pk %}">{{ migration.old_switch.hostname }}</a>
+                                <br><small class="text-muted">{{ migration.old_switch.ip_address }}</small>
+                            </p>
+                            <p><strong>New Switch:</strong> 
+                                {% if migration.new_switch %}
+                                <a href="{% url 'switches:detail' migration.new_switch.pk %}">{{ migration.new_switch.hostname }}</a>
+                                <br><small class="text-muted">{{ migration.new_switch.ip_address }}</small>
+                                {% else %}
+                                <span class="text-muted">Not assigned yet</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong> 
+                                {% if migration.migration_status == 'Completed' %}
+                                <span class="badge bg-success">{{ migration.migration_status }}</span>
+                                {% elif migration.migration_status == 'In Progress' %}
+                                <span class="badge bg-primary">{{ migration.migration_status }}</span>
+                                {% elif migration.migration_status == 'Failed' %}
+                                <span class="badge bg-danger">{{ migration.migration_status }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ migration.migration_status }}</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Priority:</strong> 
+                                {% if migration.priority == 'Critical' %}
+                                <span class="badge bg-danger">{{ migration.priority }}</span>
+                                {% elif migration.priority == 'High' %}
+                                <span class="badge bg-warning text-dark">{{ migration.priority }}</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ migration.priority }}</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Assigned To:</strong> 
+                                {% if migration.assigned_to %}
+                                {{ migration.assigned_to.get_full_name|default:migration.assigned_to.username }}
+                                {% else %}
+                                <span class="text-muted">Unassigned</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Update Status Form -->
+                    {% if user.is_admin or user.can_update_migration_status %}
+                    <form method="post" action="{% url 'migrations:update_status' migration.pk %}" class="mt-3">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-8">
+                                <select name="status" class="form-select">
+                                    {% for status in migration.MIGRATION_STATUS_CHOICES %}
+                                    <option value="{{ status.0 }}" {% if migration.migration_status == status.0 %}selected{% endif %}>
+                                        {{ status.1 }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">Update Status</button>
+                            </div>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Timeline</h5>
+                    <p><small><strong>Scheduled:</strong></small><br>
+                       {{ migration.scheduled_date|date:"M d, Y H:i" }}</p>
+                    
+                    {% if migration.actual_start_time %}
+                    <p><small><strong>Started:</strong></small><br>
+                       {{ migration.actual_start_time|date:"M d, Y H:i" }}</p>
+                    {% endif %}
+                    
+                    {% if migration.actual_end_time %}
+                    <p><small><strong>Completed:</strong></small><br>
+                       {{ migration.actual_end_time|date:"M d, Y H:i" }}</p>
+                    <p><small><strong>Duration:</strong></small><br>
+                       {{ migration.actual_downtime|default:"--" }} minutes</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Port Migration Progress -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-hdd-network"></i> Port Migration Progress</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6>Fiber Ports</h6>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="flex-grow-1 me-3">
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar bg-info" role="progressbar" 
+                                     style="width: {% widthratio migration.fiber_ports_migrated migration.fiber_ports_to_migrate 100 %}%">
+                                    {{ migration.fiber_ports_migrated }} / {{ migration.fiber_ports_to_migrate }}
+                                </div>
+                            </div>
+                        </div>
+                        {% if migration.is_fiber_migration_complete %}
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6>UTP Ports</h6>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="flex-grow-1 me-3">
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {% widthratio migration.utp_ports_migrated migration.utp_ports_to_migrate 100 %}%">
+                                    {{ migration.utp_ports_migrated }} / {{ migration.utp_ports_to_migrate }}
+                                </div>
+                            </div>
+                        </div>
+                        {% if migration.is_utp_migration_complete %}
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update Port Progress Form -->
+            <form method="post" action="{% url 'migrations:update_port_progress' migration.pk %}" class="border-top pt-3">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-5">
+                        <label class="form-label">Fiber Ports Migrated</label>
+                        <input type="number" name="fiber_ports_migrated" class="form-control" 
+                               value="{{ migration.fiber_ports_migrated }}" 
+                               max="{{ migration.fiber_ports_to_migrate }}" min="0">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">UTP Ports Migrated</label>
+                        <input type="number" name="utp_ports_migrated" class="form-control" 
+                               value="{{ migration.utp_ports_migrated }}" 
+                               max="{{ migration.utp_ports_to_migrate }}" min="0">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary w-100">Update</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabs for Details -->
+    <ul class="nav nav-tabs" id="migrationTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="checklist-tab" data-bs-toggle="tab" data-bs-target="#checklist" type="button">
+                <i class="bi bi-list-check"></i> Checklist ({{ checklist|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ports-tab" data-bs-toggle="tab" data-bs-target="#ports" type="button">
+                <i class="bi bi-hdd-network"></i> Port Mappings ({{ port_mappings|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button">
+                <i class="bi bi-people"></i> User Impact ({{ user_impacts|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="issues-tab" data-bs-toggle="tab" data-bs-target="#issues" type="button">
+                <i class="bi bi-exclamation-triangle"></i> Issues ({{ issues|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" type="button">
+                <i class="bi bi-clock-history"></i> Activity Log
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content border border-top-0 p-3 bg-white" id="migrationTabsContent">
+        <!-- Checklist Tab -->
+        <div class="tab-pane fade show active" id="checklist" role="tabpanel">
+            <!-- Pre-Migration -->
+            <h5 class="mt-3">Pre-Migration</h5>
+            <div class="list-group">
+                {% for item in checklist %}
+                {% if item.phase == 'Pre-Migration' %}
+                <div class="list-group-item">
+                    <div class="d-flex align-items-start">
+                        <div class="form-check me-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   {% if item.is_completed %}checked{% endif %}
+                                   onchange="toggleChecklistItem({{ item.pk }}, this.checked)">
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="{% if item.is_completed %}text-decoration-line-through text-muted{% endif %}">
+                                {{ item.description }}
+                            </div>
+                            {% if item.is_completed %}
+                            <small class="text-muted">
+                                <i class="bi bi-check-circle"></i> Completed by {{ item.completed_by.username }} 
+                                on {{ item.completed_at|date:"M d, Y H:i" }}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- During Migration -->
+            <h5 class="mt-3">During Migration</h5>
+            <div class="list-group">
+                {% for item in checklist %}
+                {% if item.phase == 'During Migration' %}
+                <div class="list-group-item">
+                    <div class="d-flex align-items-start">
+                        <div class="form-check me-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   {% if item.is_completed %}checked{% endif %}
+                                   onchange="toggleChecklistItem({{ item.pk }}, this.checked)">
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="{% if item.is_completed %}text-decoration-line-through text-muted{% endif %}">
+                                {{ item.description }}
+                            </div>
+                            {% if item.is_completed %}
+                            <small class="text-muted">
+                                <i class="bi bi-check-circle"></i> Completed by {{ item.completed_by.username }} 
+                                on {{ item.completed_at|date:"M d, Y H:i" }}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Post-Migration -->
+            <h5 class="mt-3">Post-Migration</h5>
+            <div class="list-group">
+                {% for item in checklist %}
+                {% if item.phase == 'Post-Migration' %}
+                <div class="list-group-item">
+                    <div class="d-flex align-items-start">
+                        <div class="form-check me-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   {% if item.is_completed %}checked{% endif %}
+                                   onchange="toggleChecklistItem({{ item.pk }}, this.checked)">
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="{% if item.is_completed %}text-decoration-line-through text-muted{% endif %}">
+                                {{ item.description }}
+                            </div>
+                            {% if item.is_completed %}
+                            <small class="text-muted">
+                                <i class="bi bi-check-circle"></i> Completed by {{ item.completed_by.username }} 
+                                on {{ item.completed_at|date:"M d, Y H:i" }}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Port Mappings Tab -->
+        <div class="tab-pane fade" id="ports" role="tabpanel">
+            <div class="mb-3">
+                {% if user.is_admin or user.can_manage_port_mappings %}
+                <a href="{% url 'migrations:add_port_mapping' migration.pk %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Add Port Mapping
+                </a>
+                {% endif %}
+                {% if user.is_admin or user.can_export_migration_reports %}
+                <a href="{% url 'migrations:export_port_mappings' migration.pk %}" class="btn btn-sm btn-success">
+                    <i class="bi bi-download"></i> Export to CSV
+                </a>
+                {% endif %}
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Old Port</th>
+                            <th>Type</th>
+                            <th>New Port</th>
+                            <th>Connected Device</th>
+                            <th>VLAN</th>
+                            <th>Status</th>
+                            <th>Test Result</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mapping in port_mappings %}
+                        <tr class="{% if mapping.is_migrated %}table-success{% endif %}">
+                            <td><code>{{ mapping.old_port_number }}</code></td>
+                            <td>
+                                {% if mapping.old_port_type == 'Fiber' %}
+                                <span class="badge bg-info">Fiber</span>
+                                {% else %}
+                                <span class="badge bg-secondary">UTP</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if mapping.new_port_number %}
+                                <code>{{ mapping.new_port_number }}</code>
+                                {% else %}
+                                <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ mapping.connected_device|default:"-" }}</small></td>
+                            <td><small>{{ mapping.old_vlan|default:"-" }}</small></td>
+                            <td>
+                                {% if mapping.is_migrated %}
+                                <span class="badge bg-success">Migrated</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if mapping.test_result == 'Pass' %}
+                                <span class="badge bg-success">Pass</span>
+                                {% elif mapping.test_result == 'Fail' %}
+                                <span class="badge bg-danger">Fail</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'migrations:edit_port_mapping' mapping.pk %}" class="btn btn-warning" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-info" onclick="viewPortDetails({{ mapping.pk }})" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">No port mappings defined yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- User Impact Tab -->
+        <div class="tab-pane fade" id="users" role="tabpanel">
+            <div class="mb-3">
+                <a href="{% url 'migrations:add_user_impact' migration.pk %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Add User Impact
+                </a>
+            </div>
+            
+            {% for impact in user_impacts %}
+            <div class="card mb-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <h6>{{ impact.department_name }}</h6>
+                            <p class="mb-1"><small><strong>Contact:</strong> {{ impact.contact_person }}</small></p>
+                            <p class="mb-1"><small><i class="bi bi-envelope"></i> {{ impact.contact_email }}</small></p>
+                            <p class="mb-1"><small><i class="bi bi-telephone"></i> {{ impact.contact_phone }}</small></p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Users Affected:</strong> <span class="badge bg-warning text-dark">{{ impact.number_of_users_affected }}</span></p>
+                            <p><strong>Notified:</strong> 
+                                {% if impact.notified %}
+                                <i class="bi bi-check-circle-fill text-success"></i> Yes
+                                {% else %}
+                                <i class="bi bi-x-circle-fill text-danger"></i> No
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            {% if impact.critical_services %}
+                            <p><small><strong>Critical Services:</strong></small><br>
+                               <small>{{ impact.critical_services|truncatewords:15 }}</small></p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-1 text-end">
+                            {% if not impact.notified %}
+                            <form method="post" action="{% url 'migrations:send_notification' impact.pk %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success mb-1" title="Mark as Notified">
+                                    <i class="bi bi-bell"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted text-center py-4">No user impact assessments recorded</p>
+            {% endfor %}
+        </div>
+
+        <!-- Issues Tab -->
+        <div class="tab-pane fade" id="issues" role="tabpanel">
+            <div class="mb-3">
+                {% if user.is_admin or user.can_manage_issues %}
+                <a href="{% url 'migrations:add_issue' migration.pk %}" class="btn btn-sm btn-danger">
+                    <i class="bi bi-plus"></i> Report Issue
+                </a>
+                {% endif %}
+            </div>
+            
+            {% for issue in issues %}
+            <div class="card mb-2 border-start border-{{ issue.severity|lower }} border-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6>{{ issue.title }}</h6>
+                            <p class="mb-2">{{ issue.description|truncatewords:30 }}</p>
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> Reported by {{ issue.reported_by.username }} on {{ issue.created_at|date:"M d, Y H:i" }}
+                                {% if issue.assigned_to %}
+                                <br><i class="bi bi-person-check"></i> Assigned to {{ issue.assigned_to.username }}
+                                {% endif %}
+                            </small>
+                            {% if issue.resolution %}
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <strong>Resolution:</strong> {{ issue.resolution|truncatewords:20 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="text-end ms-3">
+                            <div class="mb-2">
+                                {% if issue.severity == 'Critical' %}
+                                <span class="badge bg-danger">{{ issue.severity }}</span>
+                                {% elif issue.severity == 'High' %}
+                                <span class="badge bg-warning text-dark">{{ issue.severity }}</span>
+                                {% elif issue.severity == 'Medium' %}
+                                <span class="badge bg-info">{{ issue.severity }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ issue.severity }}</span>
+                                {% endif %}
+                                
+                                {% if issue.status == 'Open' %}
+                                <span class="badge bg-danger">{{ issue.status }}</span>
+                                {% elif issue.status == 'In Progress' %}
+                                <span class="badge bg-primary">{{ issue.status }}</span>
+                                {% elif issue.status == 'Resolved' %}
+                                <span class="badge bg-success">{{ issue.status }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ issue.status }}</span>
+                                {% endif %}
+                            </div>
+                            <a href="{% url 'migrations:update_issue' issue.pk %}" class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted text-center py-4">No issues reported</p>
+            {% endfor %}
+        </div>
+
+        <!-- Activity Log Tab -->
+        <div class="tab-pane fade" id="activity" role="tabpanel">
+            <div class="timeline">
+                {% for log in activity_log %}
+                <div class="d-flex mb-3">
+                    <div class="me-3">
+                        <i class="bi bi-circle-fill text-primary" style="font-size: 0.5rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong>{{ log.action }}</strong>
+                        <p class="mb-0">{{ log.description }}</p>
+                        <small class="text-muted">
+                            by {{ log.user.username }} - {{ log.timestamp|timesince }} ago
+                        </small>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">No activity recorded</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleChecklistItem(itemId, isChecked) {
+    fetch(`/migrations/checklist/${itemId}/toggle/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_completed: isChecked })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Report Issue{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'migrations:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'migrations:migration_detail' migration.pk %}">Migration</a></li>
+            <li class="breadcrumb-item active">Report Issue</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Report Migration Issue</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <strong>Migration:</strong> {{ migration.old_switch.hostname }} → {{ migration.new_switch.hostname|default:"TBD" }}<br>
+                <strong>Status:</strong> <span class="badge bg-primary">{{ migration.migration_status }}</span>
+            </div>
+
+            <form method="post" id="issueForm">
+                {% csrf_token %}
+
+                <!-- ISSUE DETAILS -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Issue Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Issue Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" 
+                                   placeholder="Brief, descriptive title of the issue" required maxlength="200">
+                            <small class="text-muted">Example: "Port 24 not responding after migration"</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Detailed Description <span class="text-danger">*</span></label>
+                            <textarea name="description" class="form-control" rows="8" required
+                                      placeholder="Provide a detailed description of the issue:&#10;&#10;- What happened?&#10;- When did it occur?&#10;- What was the expected behavior?&#10;- What actually happened?&#10;- Steps to reproduce (if applicable)&#10;- Any error messages"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEVERITY AND ASSIGNMENT -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Severity & Assignment</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Severity <span class="text-danger">*</span></label>
+                                    <select name="severity" class="form-control" id="severitySelect" required>
+                                        {% for value, label in severity_choices %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div id="severityHelp" class="mt-2"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Assign To</label>
+                                    <select name="assigned_to" class="form-control">
+                                        <option value="">-- Unassigned --</option>
+                                        {% for user in users %}
+                                        <option value="{{ user.id }}" {% if migration.assigned_to.id == user.id %}selected{% endif %}>
+                                            {{ user.get_full_name|default:user.username }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-muted">Default: migration engineer</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Severity Descriptions -->
+                        <div class="alert alert-secondary">
+                            <strong>Severity Guidelines:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Critical:</strong> Complete service outage, major security issue</li>
+                                <li><strong>High:</strong> Significant impact on multiple users or services</li>
+                                <li><strong>Medium:</strong> Moderate impact, workaround available</li>
+                                <li><strong>Low:</strong> Minor issue, cosmetic, or low impact</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IMPACT INFORMATION -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Impact Information (Optional)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Affected Ports/Devices</label>
+                                    <input type="text" name="affected_resources" class="form-control" 
+                                           placeholder="e.g., Ports 1-4, Finance Server">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Users Affected</label>
+                                    <input type="number" name="users_affected" class="form-control" 
+                                           placeholder="Number of affected users" min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ATTACHMENTS NOTE -->
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> <strong>Note:</strong> You can add screenshots and additional documentation in the issue update page after creation.
+                </div>
+
+                <!-- ACTION BUTTONS -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'migrations:migration_detail' migration.pk %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="bi bi-exclamation-triangle"></i> Report Issue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Severity helper text
+const severityHelp = {
+    'Critical': '<div class="alert alert-danger"><strong>Critical Issue</strong><br>Immediate action required. Complete service outage or major security vulnerability.</div>',
+    'High': '<div class="alert alert-warning"><strong>High Priority</strong><br>Significant impact requiring prompt attention. Multiple users or critical services affected.</div>',
+    'Medium': '<div class="alert alert-info"><strong>Medium Priority</strong><br>Moderate impact. Should be addressed but workaround may be available.</div>',
+    'Low': '<div class="alert alert-secondary"><strong>Low Priority</strong><br>Minor issue with minimal impact. Can be scheduled for later resolution.</div>'
+};
+
+document.getElementById('severitySelect').addEventListener('change', function() {
+    document.getElementById('severityHelp').innerHTML = severityHelp[this.value] || '';
+});
+
+// Initialize with default
+document.getElementById('severityHelp').innerHTML = severityHelp['Medium'];
+</script>
+{% endblock %}

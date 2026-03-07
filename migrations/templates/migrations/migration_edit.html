@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2>Edit Migration</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label>Old Switch (cannot change)</label>
+            <input type="text" class="form-control" value="{{ migration.old_switch.hostname }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label>New Switch</label>
+            <select name="new_switch" class="form-control">
+                <option value="">-- Not Assigned --</option>
+                {% for switch in available_new_switches %}
+                <option value="{{ switch.id }}" {% if migration.new_switch.id == switch.id %}selected{% endif %}>
+                    {{ switch.hostname }} - {{ switch.ip_address }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label>Scheduled Date</label>
+            <input type="datetime-local" name="scheduled_date" class="form-control" 
+                   value="{{ migration.scheduled_date|date:'Y-m-d\TH:i' }}" required>
+        </div>
+        <div class="mb-3">
+            <label>Priority</label>
+            <select name="priority" class="form-control">
+                {% for value, label in priority_choices %}
+                <option value="{{ value }}" {% if migration.priority == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label>Fiber Ports to Migrate</label>
+            <input type="number" name="fiber_ports_to_migrate" class="form-control" value="{{ migration.fiber_ports_to_migrate }}">
+        </div>
+        <div class="mb-3">
+            <label>UTP Ports to Migrate</label>
+            <input type="number" name="utp_ports_to_migrate" class="form-control" value="{{ migration.utp_ports_to_migrate }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Update Migration</button>
+        <a href="{% url 'migrations:migration_detail' migration.pk %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

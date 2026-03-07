@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% block title %}Update Issue{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'migrations:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'migrations:migration_detail' issue.switch_migration.pk %}">Migration</a></li>
+            <li class="breadcrumb-item active">Update Issue</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Update Migration Issue</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <strong>Migration:</strong> {{ issue.switch_migration.old_switch.hostname }} → {{ issue.switch_migration.new_switch.hostname|default:"TBD" }}<br>
+                <strong>Created:</strong> {{ issue.created_at|date:"M d, Y H:i" }} by {{ issue.reported_by.username }}
+            </div>
+
+            <form method="post" id="issueUpdateForm">
+                {% csrf_token %}
+
+                <!-- ISSUE DETAILS -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Issue Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Issue Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" 
+                                   value="{{ issue.title }}" required maxlength="200">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Detailed Description <span class="text-danger">*</span></label>
+                            <textarea name="description" class="form-control" rows="8" required>{{ issue.description }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STATUS AND SEVERITY -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Status & Severity</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Status <span class="text-danger">*</span></label>
+                                    <select name="status" class="form-control" id="statusSelect" required>
+                                        {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if issue.status == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Severity <span class="text-danger">*</span></label>
+                                    <select name="severity" class="form-control" id="severitySelect" required>
+                                        {% for value, label in severity_choices %}
+                                        <option value="{{ value }}" {% if issue.severity == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Assign To</label>
+                                    <select name="assigned_to" class="form-control">
+                                        <option value="">-- Unassigned --</option>
+                                        {% for user in users %}
+                                        <option value="{{ user.id }}" 
+                                                {% if issue.assigned_to and issue.assigned_to.id == user.id %}selected{% endif %}>
+                                            {{ user.get_full_name|default:user.username }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Descriptions -->
+                        <div class="alert alert-secondary">
+                            <strong>Status Options:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Open:</strong> Issue has been reported and needs attention</li>
+                                <li><strong>In Progress:</strong> Working on resolving the issue</li>
+                                <li><strong>Resolved:</strong> Issue has been fixed</li>
+                                <li><strong>Closed:</strong> Issue is resolved and verified</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESOLUTION -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Resolution Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Resolution / Notes</label>
+                            <textarea name="resolution" class="form-control" rows="6" 
+                                      placeholder="Describe how the issue was resolved, steps taken, root cause, etc.">{{ issue.resolution }}</textarea>
+                            <small class="text-muted">This will be visible to all team members</small>
+                        </div>
+
+                        {% if issue.resolved_at %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> <strong>Resolved:</strong> {{ issue.resolved_at|date:"M d, Y H:i" }} 
+                            by {{ issue.resolved_by.username }}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Issue not yet resolved. Change status to "Resolved" or "Closed" when fixed.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ADDITIONAL INFO -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Additional Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Reported By:</strong> {{ issue.reported_by.get_full_name|default:issue.reported_by.username }}</p>
+                                <p><strong>Reported On:</strong> {{ issue.created_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Last Updated:</strong> {{ issue.updated_at|date:"M d, Y H:i" }}</p>
+                                {% if issue.assigned_to %}
+                                <p><strong>Currently Assigned To:</strong> {{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACTION BUTTONS -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'migrations:migration_detail' issue.switch_migration.pk %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    <div>
+                        <button type="submit" name="action" value="update" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> Update Issue
+                        </button>
+                        {% if issue.status != 'Closed' %}
+                        <button type="submit" name="action" value="close" class="btn btn-success btn-lg" 
+                                onclick="return confirm('Mark this issue as closed?')">
+                            <i class="bi bi-check-circle"></i> Mark as Closed
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show alert when status changes to Resolved/Closed
+document.getElementById('statusSelect').addEventListener('change', function() {
+    if (this.value === 'Resolved' || this.value === 'Closed') {
+        if (!document.querySelector('textarea[name="resolution"]').value.trim()) {
+            alert('Please add resolution details before marking as resolved/closed.');
+        }
+    }
+});
+
+// Highlight severity changes
+const severityColors = {
+    'Critical': 'danger',
+    'High': 'warning',
+    'Medium': 'info',
+    'Low': 'secondary'
+};
+
+document.getElementById('severitySelect').addEventListener('change', function() {
+    const select = this;
+    select.className = 'form-control border-' + (severityColors[this.value] || 'secondary');
+});
+
+// Initialize
+document.getElementById('severitySelect').className = 'form-control border-' + 
+    (severityColors[document.getElementById('severitySelect').value] || 'secondary');
+</script>
+
+<style>
+.border-danger {
+    border-width: 2px !important;
+    border-color: #dc3545 !important;
+}
+.border-warning {
+    border-width: 2px !important;
+    border-color: #ffc107 !important;
+}
+.border-info {
+    border-width: 2px !important;
+    border-color: #0dcaf0 !important;
+}
+.border-secondary {
+    border-width: 2px !important;
+    border-color: #6c757d !important;
+}
+</style>
+{% endblock %}

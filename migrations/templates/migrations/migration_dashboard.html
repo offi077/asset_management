@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+
+{% block title %}Migration Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-arrow-left-right"></i> Switch Migration Dashboard</h2>
+        {% if user.is_admin or user.can_add_migrations %}
+        <a href="{% url 'migrations:create_project' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Migration Project
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Projects</h6>
+                            <h2 class="mb-0">{{ total_projects }}</h2>
+                        </div>
+                        <i class="bi bi-folder-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Active Projects</h6>
+                            <h2 class="mb-0">{{ active_projects }}</h2>
+                        </div>
+                        <i class="bi bi-arrow-repeat" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Completed</h6>
+                            <h2 class="mb-0">{{ completed_projects }}</h2>
+                        </div>
+                        <i class="bi bi-check-circle-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Open Issues</h6>
+                            <h2 class="mb-0">{{ recent_issues|length }}</h2>
+                        </div>
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Projects -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-folder2-open"></i> Active Migration Projects</h5>
+        </div>
+        <div class="card-body">
+            {% if projects %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Project Name</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Timeline</th>
+                            <th>Switches</th>
+                            <th>Manager</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'migrations:project_detail' project.pk %}" class="text-decoration-none">
+                                    <strong>{{ project.project_name }}</strong>
+                                </a>
+                                {% if project.is_overdue %}
+                                <span class="badge bg-danger ms-2">Overdue</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if project.status == 'Planning' %}
+                                <span class="badge bg-secondary">{{ project.status }}</span>
+                                {% elif project.status == 'In Progress' %}
+                                <span class="badge bg-primary">{{ project.status }}</span>
+                                {% elif project.status == 'Completed' %}
+                                <span class="badge bg-success">{{ project.status }}</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">{{ project.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {{ project.progress_percentage }}%"
+                                         aria-valuenow="{{ project.progress_percentage }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        {{ project.progress_percentage }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <small>
+                                    <i class="bi bi-calendar-event"></i> {{ project.planned_start_date|date:"M d" }} - {{ project.planned_end_date|date:"M d, Y" }}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ project.completed_migrations }} / {{ project.total_switches_to_migrate }}</span>
+                            </td>
+                            <td>
+                                {% if project.project_manager %}
+                                <small>{{ project.project_manager.get_full_name|default:project.project_manager.username }}</small>
+                                {% else %}
+                                <small class="text-muted">Unassigned</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'migrations:project_detail' project.pk %}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-2">No migration projects yet</p>
+                <a href="{% url 'migrations:create_project' %}" class="btn btn-primary">
+                    Create Your First Project
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Upcoming Migrations -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-calendar-week"></i> Upcoming Migrations (Next 7 Days)</h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if upcoming_migrations %}
+                    <div class="list-group list-group-flush">
+                        {% for migration in upcoming_migrations %}
+                        <a href="{% url 'migrations:migration_detail' migration.pk %}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ migration.old_switch.hostname }} → {{ migration.new_switch.hostname|default:"TBD" }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar3"></i> {{ migration.scheduled_date|date:"M d, Y H:i" }}
+                                    </small>
+                                    <br>
+                                    <small>
+                                        <span class="badge bg-secondary">{{ migration.project.project_name }}</span>
+                                        {% if migration.priority == 'Critical' %}
+                                        <span class="badge bg-danger">{{ migration.priority }}</span>
+                                        {% elif migration.priority == 'High' %}
+                                        <span class="badge bg-warning text-dark">{{ migration.priority }}</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <span class="badge bg-primary">{{ migration.migration_status }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-calendar-check" style="font-size: 2rem;"></i>
+                        <p class="mt-2">No migrations scheduled</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- In Progress Migrations -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> In Progress Migrations</h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if in_progress %}
+                    <div class="list-group list-group-flush">
+                        {% for migration in in_progress %}
+                        <a href="{% url 'migrations:migration_detail' migration.pk %}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ migration.old_switch.hostname }} → {{ migration.new_switch.hostname|default:"TBD" }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-person"></i>
+                                        {{ migration.assigned_to.get_full_name|default_if_none:migration.assigned_to.username|default:"Unassigned" }}
+                                    </small>
+                                    <div class="mt-2">
+                                        <small class="text-muted">Port Migration Progress:</small>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: {{ migration.port_migration_progress }}%">
+                                                {{ migration.port_migration_progress }}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                        <p class="mt-2">No migrations in progress</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Issues -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Open Issues</h5>
+        </div>
+        <div class="card-body">
+            {% if recent_issues %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Severity</th>
+                            <th>Issue</th>
+                            <th>Migration</th>
+                            <th>Status</th>
+                            <th>Assigned To</th>
+                            <th>Reported</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in recent_issues %}
+                        <tr>
+                            <td>
+                                {% if issue.severity == 'Critical' %}
+                                <span class="badge bg-danger">{{ issue.severity }}</span>
+                                {% elif issue.severity == 'High' %}
+                                <span class="badge bg-warning text-dark">{{ issue.severity }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ issue.severity }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ issue.title }}</td>
+                            <td>
+                                <a href="{% url 'migrations:migration_detail' issue.switch_migration.pk %}">
+                                    {{ issue.switch_migration.old_switch.hostname }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-info">{{ issue.status }}</span></td>
+                            <td>
+                                {% if issue.assigned_to %}
+                                {{ issue.assigned_to.username }}
+                                {% else %}
+                                <small class="text-muted">Unassigned</small>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ issue.created_at|timesince }} ago</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                <p class="mt-2">No open issues</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

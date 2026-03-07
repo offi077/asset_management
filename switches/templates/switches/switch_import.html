@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h3 class="mb-3">{{ title }}</h3>
+
+<!-- Display messages -->
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message|safe }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card p-4">
+      <h5>Upload CSV File</h5>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="csv_file" class="form-label">Choose CSV File</label>
+          <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Upload and Import</button>
+          <a href="{% url 'switches:list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card p-4 bg-light">
+      <h5>CSV Format Instructions</h5>
+      <p class="small mb-2">Your CSV file should have the following columns:</p>
+      <ul class="small">
+        <li><strong>name</strong> - Switch name</li>
+        <li><strong>ip_address</strong> - IP address</li>
+        <li><strong>location</strong> - Physical location</li>
+        <li><strong>model</strong> - Switch model</li>
+        <li><strong>serial_number</strong> - Serial number</li>
+      </ul>
+      <hr>
+      <h6>Sample CSV:</h6>
+      <a href="{% url 'switches:download_sample' %}" class="btn btn-sm btn-outline-primary">Download Sample CSV</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

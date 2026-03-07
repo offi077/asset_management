@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ switch.hostname }} - Switch Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-router"></i> {{ switch.hostname }}
+            {% if switch.is_stack %}
+            <span class="badge bg-info">Stack Member #{{ switch.stack_member_number }}</span>
+            {% endif %}
+            {% if switch.is_deleted %}
+            <span class="badge bg-danger">DELETED</span>
+            {% endif %}
+        </h2>
+        <div>
+            <a href="{% url 'switches:list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            {% if not switch.is_deleted %}
+                {% if user.can_edit_switches or user.is_admin %}
+                <a href="{% url 'switches:edit' switch.pk %}" class="btn btn-warning">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                {% endif %}
+                {% if user.can_delete_switches or user.is_admin %}
+                <form method="post" action="{% url 'switches:delete' switch.pk %}" style="display:inline;" 
+                      onsubmit="return confirm('Delete this switch?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+                {% endif %}
+            {% else %}
+                {% if user.can_restore_switches or user.is_admin %}
+                <form method="post" action="{% url 'switches:restore' switch.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-arrow-counterclockwise"></i> Restore
+                    </button>
+                </form>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stack Information (if applicable) -->
+    {% if switch.is_stack and stack_members %}
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-stack"></i> Stack Configuration</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Stack Group:</strong> {{ switch.hostname }} ({{ switch.ip_address }})</p>
+            <p><strong>Total Members:</strong> {{ stack_members.count }}</p>
+            
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Member #</th>
+                        <th>Priority</th>
+                        <th>Serial Number</th>
+                        <th>Model</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in stack_members %}
+                    <tr {% if member.pk == switch.pk %}class="table-primary"{% endif %}>
+                        <td>
+                            {{ member.stack_member_number }}
+                            {% if member.stack_priority == 1 %}
+                            <span class="badge bg-warning text-dark">Master</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ member.stack_priority }}</td>
+                        <td>{{ member.serial_number }}</td>
+                        <td>{{ member.model }}</td>
+                        <td>
+                            {% if member.status == 'Active' %}
+                            <span class="badge bg-success">{{ member.status }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ member.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if member.pk != switch.pk %}
+                            <a href="{% url 'switches:detail' member.pk %}" class="btn btn-sm btn-info">View</a>
+                            {% else %}
+                            <span class="badge bg-primary">Current</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Basic Information -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">Hostname:</th>
+                            <td>{{ switch.hostname }}</td>
+                        </tr>
+                        <tr>
+                            <th>IP Address:</th>
+                            <td>{{ switch.ip_address }}</td>
+                        </tr>
+                        <tr>
+                            <th>Serial Number:</th>
+                            <td>{{ switch.serial_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Model:</th>
+                            <td>{{ switch.model|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Vendor:</th>
+                            <td>{{ switch.vendor|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>IT Tag:</th>
+                            <td>{{ switch.it_tag|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Switch Role:</th>
+                            <td>
+                                {% if switch.switch_role %}
+                                <span class="badge bg-secondary">{{ switch.get_switch_role_display }}</span>
+                                {% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if switch.status == 'Active' %}
+                                <span class="badge bg-success">{{ switch.status }}</span>
+                                {% elif switch.status == 'Inactive' %}
+                                <span class="badge bg-secondary">{{ switch.status }}</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">{{ switch.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Location Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">Building No:</th>
+                            <td>{{ switch.building_no|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Location:</th>
+                            <td>{{ switch.location|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Communication Room:</th>
+                            <td>{{ switch.communication_room_no|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Cabinet No:</th>
+                            <td>{{ switch.cabinet_no|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Cabinet Tag:</th>
+                            <td>{{ switch.cabinet_tag|default:"-" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Port and Technical Details -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Port Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">Line Cards (Fiber):</th>
+                            <td>{{ switch.no_of_line_cards_fiber }}</td>
+                        </tr>
+                        <tr>
+                            <th>Line Cards (UTP):</th>
+                            <td>{{ switch.no_of_line_cards_utp }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total Fiber Ports:</th>
+                            <td><span class="badge bg-primary">{{ switch.total_ports_fiber }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Total UTP Ports:</th>
+                            <td><span class="badge bg-primary">{{ switch.total_ports_utp }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Port Type:</th>
+                            <td>{{ switch.port_type|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Used Ports:</th>
+                            <td><span class="badge bg-warning text-dark">{{ switch.no_of_used_ports }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Free Ports:</th>
+                            <td><span class="badge bg-success">{{ switch.free_ports }}</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Power Supply Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">Total Power Supplies:</th>
+                            <td><span class="badge bg-primary">{{ switch.no_of_power_supplies }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Used Power Supplies:</th>
+                            <td><span class="badge bg-warning text-dark">{{ switch.used_power_supplies }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Available Power Supplies:</th>
+                            <td>
+                                <span class="badge bg-success">
+                                    {{ switch.no_of_power_supplies|add:"-"|add:switch.used_power_supplies }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            {% if switch.remarks %}
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Remarks</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ switch.remarks }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">System Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <p><strong>Created At:</strong><br>{{ switch.created_at|date:"M d, Y H:i" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>Updated At:</strong><br>{{ switch.updated_at|date:"M d, Y H:i" }}</p>
+                </div>
+                {% if switch.is_deleted %}
+                <div class="col-md-4">
+                    <p><strong>Deleted At:</strong><br>{{ switch.deleted_at|date:"M d, Y H:i" }}</p>
+                    <p><strong>Deleted By:</strong><br>{{ switch.deleted_by }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

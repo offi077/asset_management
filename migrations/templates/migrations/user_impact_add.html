@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Add User Impact Assessment{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'migrations:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'migrations:migration_detail' migration.pk %}">Migration</a></li>
+            <li class="breadcrumb-item active">Add User Impact</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0"><i class="bi bi-people"></i> Add User Impact Assessment</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <strong>Migration:</strong> {{ migration.old_switch.hostname }} → {{ migration.new_switch.hostname|default:"TBD" }}<br>
+                <strong>Scheduled:</strong> {{ migration.scheduled_date|date:"M d, Y H:i" }}
+            </div>
+
+            <form method="post" id="userImpactForm">
+                {% csrf_token %}
+
+                <!-- DEPARTMENT INFORMATION -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Department Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Department Name <span class="text-danger">*</span></label>
+                            <input type="text" name="department_name" class="form-control" 
+                                   placeholder="e.g., Finance Department, IT Support" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Number of Users Affected <span class="text-danger">*</span></label>
+                            <input type="number" name="number_of_users_affected" class="form-control" 
+                                   value="0" min="0" required>
+                            <small class="text-muted">Approximate number of users who will be impacted</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTACT INFORMATION -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Primary Contact Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Contact Person <span class="text-danger">*</span></label>
+                                    <input type="text" name="contact_person" class="form-control" 
+                                           placeholder="e.g., John Doe" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Email Address <span class="text-danger">*</span></label>
+                                    <input type="email" name="contact_email" class="form-control" 
+                                           placeholder="john.doe@company.com" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" name="contact_phone" class="form-control" 
+                                           placeholder="+965 XXXX XXXX">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CRITICAL SERVICES -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Critical Services & Impact Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Critical Services Affected</label>
+                            <textarea name="critical_services" class="form-control" rows="6" 
+                                      placeholder="List all critical services, applications, or systems that will be affected:&#10;&#10;- Email Server&#10;- Database Server&#10;- File Shares&#10;- VoIP Phones&#10;- etc."></textarea>
+                            <small class="text-muted">Be specific about what will be unavailable during migration</small>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Impact Assessment</h6>
+                            <ul class="mb-0">
+                                <li>Users will experience network downtime during migration</li>
+                                <li>Estimated downtime: {{ migration.estimated_downtime|default:"TBD" }} minutes</li>
+                                <li>Plan for alternative communication methods if needed</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NOTIFICATION PLANNING -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Notification Planning</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="sendNotification">
+                            <label class="form-check-label" for="sendNotification">
+                                Send notification email to this department now
+                            </label>
+                        </div>
+                        <small class="text-muted">You can also mark notifications as sent later from the migration detail page</small>
+                    </div>
+                </div>
+
+                <!-- ACTION BUTTONS -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'migrations:migration_detail' migration.pk %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-warning btn-lg">
+                        <i class="bi bi-plus-circle"></i> Add User Impact Assessment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

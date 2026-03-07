@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Create Migration(s)</h2>
+    <p><strong>Project:</strong> {{ project.project_name }}</p>
+    
+    <form method="post" id="migrationForm">
+        {% csrf_token %}
+        
+        <!-- Multi-Select Old Switches -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Select Switches to Migrate</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label>Search Old Switches</label>
+                    <input type="text" id="switchSearch" class="form-control" placeholder="Search by hostname or IP address...">
+                </div>
+                
+                <div class="mb-3">
+                    <label>Old Switches (to be replaced) <span class="text-danger">*</span></label>
+                    <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto; background-color: #f8f9fa;">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="selectAllSwitches" onclick="toggleAllSwitches()">
+                            <label class="form-check-label fw-bold" for="selectAllSwitches">Select All</label>
+                        </div>
+                        <hr>
+                        {% for switch in available_old_switches %}
+                        <div class="form-check switch-item" data-hostname="{{ switch.hostname|lower }}" data-ip="{{ switch.ip_address }}">
+                            <input type="checkbox" class="form-check-input old-switch-checkbox" 
+                                   name="old_switches" value="{{ switch.id }}" id="switch_{{ switch.id }}">
+                            <label class="form-check-label" for="switch_{{ switch.id }}">
+                                <strong>{{ switch.hostname }}</strong> - {{ switch.ip_address }}
+                                {% if switch.location %}
+                                <br><small class="text-muted">Location: {{ switch.location }}</small>
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">No switches available for migration in this project.</p>
+                        {% endfor %}
+                    </div>
+                    <small class="text-muted">Selected: <span id="selectedCount" class="fw-bold">0</span> switch(es)</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Migration Details (Applied to All Selected) -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Migration Details (Applied to All Selected Switches)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label>Scheduled Date & Time <span class="text-danger">*</span></label>
+                            <input type="datetime-local" name="scheduled_date" class="form-control" required>
+                            <small class="text-muted">All migrations will be scheduled for this date/time</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label>Priority</label>
+                            <select name="priority" class="form-control">
+                                <option value="Low">Low</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label>Assigned To</label>
+                    <select name="assigned_to" class="form-control">
+                        <option value="">-- Unassigned --</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Same engineer will be assigned to all migrations</small>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="assignNewSwitch" onchange="toggleNewSwitchSection()">
+                    <label class="form-check-label" for="assignNewSwitch">
+                        Assign new switches now (optional - can be assigned later)
+                    </label>
+                </div>
+
+                <div id="newSwitchSection" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> You can assign new switches individually after creating the migrations, or assign them now if you know the mapping.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Port Information -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Port Migration Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label>Fiber Ports to Migrate</label>
+                            <input type="number" name="fiber_ports_to_migrate" class="form-control" value="0" min="0">
+                            <small class="text-muted">Number of fiber ports to migrate per switch</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label>UTP Ports to Migrate</label>
+                            <input type="number" name="utp_ports_to_migrate" class="form-control" value="0" min="0">
+                            <small class="text-muted">Number of UTP ports to migrate per switch</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Migration Notes</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label>Pre-Migration Notes</label>
+                    <textarea name="pre_migration_notes" class="form-control" rows="4" 
+                              placeholder="Checklist items, preparation notes, special requirements..."></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label>Rollback Plan</label>
+                    <textarea name="rollback_plan" class="form-control" rows="4" 
+                              placeholder="Steps to rollback if migration fails..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card mb-3 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Summary</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Migrations to be created:</strong> <span id="summaryCount" class="badge bg-primary">0</span></p>
+                <p class="mb-0"><small class="text-muted">Each selected switch will create one migration entry</small></p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'migrations:project_detail' project.pk %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
+                <i class="bi bi-plus-circle"></i> Create <span id="btnCount">0</span> Migration(s)
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+.switch-item {
+    padding: 8px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.switch-item:hover {
+    background-color: #e9ecef;
+}
+
+.switch-item input:checked + label {
+    font-weight: bold;
+    color: #0d6efd;
+}
+
+.form-check-label {
+    cursor: pointer;
+    width: 100%;
+}
+</style>
+
+<script>
+let selectedSwitches = new Set();
+
+// Search functionality
+document.getElementById('switchSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const switchItems = document.querySelectorAll('.switch-item');
+    
+    switchItems.forEach(item => {
+        const hostname = item.getAttribute('data-hostname');
+        const ip = item.getAttribute('data-ip');
+        
+        if (hostname.includes(searchTerm) || ip.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// Update selected count
+document.querySelectorAll('.old-switch-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedCount);
+});
+
+function updateSelectedCount() {
+    selectedSwitches.clear();
+    document.querySelectorAll('.old-switch-checkbox:checked').forEach(cb => {
+        selectedSwitches.add(cb.value);
+    });
+    
+    const count = selectedSwitches.size;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('summaryCount').textContent = count;
+    document.getElementById('btnCount').textContent = count;
+    
+    // Enable/disable submit button
+    const submitBtn = document.getElementById('submitBtn');
+    if (count > 0) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-secondary');
+        submitBtn.classList.add('btn-primary');
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.classList.remove('btn-primary');
+        submitBtn.classList.add('btn-secondary');
+    }
+}
+
+// Select all functionality
+function toggleAllSwitches() {
+    const selectAllCheckbox = document.getElementById('selectAllSwitches');
+    const visibleCheckboxes = Array.from(document.querySelectorAll('.switch-item'))
+        .filter(item => item.style.display !== 'none')
+        .map(item => item.querySelector('.old-switch-checkbox'));
+    
+    visibleCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    
+    updateSelectedCount();
+}
+
+// Toggle new switch section
+function toggleNewSwitchSection() {
+    const section = document.getElementById('newSwitchSection');
+    const checkbox = document.getElementById('assignNewSwitch');
+    section.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+// Form validation
+document.getElementById('migrationForm').addEventListener('submit', function(e) {
+    if (selectedSwitches.size === 0) {
+        e.preventDefault();
+        alert('Please select at least one switch to migrate.');
+        return false;
+    }
+    
+    // Confirm submission
+    if (!confirm(`Create ${selectedSwitches.size} migration(s)?`)) {
+        e.preventDefault();
+        return false;
+    }
+    
+    return true;
+});
+
+// Initialize
+updateSelectedCount();
+</script>
+{% endblock %}

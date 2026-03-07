@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+
+{% block title %}Project: {{ project.project_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'migrations:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'migrations:project_list' %}">Projects</a></li>
+                    <li class="breadcrumb-item active">{{ project.project_name }}</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-folder-fill"></i> {{ project.project_name }}</h2>
+        </div>
+        <div>
+            {% if user.is_admin or user.can_edit_migrations %}
+            <a href="{% url 'migrations:edit_project' project.pk %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit Project
+            </a>
+            {% endif %}
+            {% if user.is_admin or user.can_export_migration_reports %}
+            <a href="{% url 'migrations:export_report' project.pk %}" class="btn btn-success">
+                <i class="bi bi-download"></i> Export Report
+            </a>
+            {% endif %}
+            {% if user.is_admin or user.can_add_migrations %}
+            <a href="{% url 'migrations:create_migration' project.pk %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Migration
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Project Overview -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Project Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong> 
+                                {% if project.status == 'Planning' %}
+                                <span class="badge bg-secondary">{{ project.status }}</span>
+                                {% elif project.status == 'In Progress' %}
+                                <span class="badge bg-primary">{{ project.status }}</span>
+                                {% elif project.status == 'Completed' %}
+                                <span class="badge bg-success">{{ project.status }}</span>
+                                {% elif project.status == 'On Hold' %}
+                                <span class="badge bg-warning text-dark">{{ project.status }}</span>
+                                {% else %}
+                                <span class="badge bg-danger">{{ project.status }}</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Project Manager:</strong> 
+                                {% if project.project_manager %}
+                                {{ project.project_manager.get_full_name|default:project.project_manager.username }}
+                                {% else %}
+                                <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Team Members:</strong> 
+                                {% if project.team_members.all %}
+                                {{ project.team_members.count }}
+                                {% else %}
+                                <span class="text-muted">None</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Timeline:</strong><br>
+                               <small>{{ project.planned_start_date|date:"M d, Y" }} - {{ project.planned_end_date|date:"M d, Y" }}</small>
+                            </p>
+                            {% if project.actual_start_date %}
+                            <p><strong>Actual Start:</strong> {{ project.actual_start_date|date:"M d, Y" }}</p>
+                            {% endif %}
+                            {% if project.actual_end_date %}
+                            <p><strong>Actual End:</strong> {{ project.actual_end_date|date:"M d, Y" }}</p>
+                            {% endif %}
+                            {% if project.estimated_budget %}
+                            <p><strong>Budget:</strong> ${{ project.estimated_budget }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if project.description %}
+                    <div class="mt-3">
+                        <strong>Description:</strong>
+                        <p>{{ project.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Progress Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Overall Progress</span>
+                            <span><strong>{{ project.progress_percentage }}%</strong></span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ project.progress_percentage }}%">
+                                {{ project.completed_migrations }} / {{ project.total_switches_to_migrate }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row text-center">
+                        <div class="col-6 mb-2">
+                            <h4 class="mb-0">{{ project.total_switches_to_migrate }}</h4>
+                            <small class="text-muted">Total Migrations</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <h4 class="mb-0 text-success">{{ project.completed_migrations }}</h4>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                    </div>
+                    
+                    {% if open_issues > 0 %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>{{ open_issues }}</strong> open issue{{ open_issues|pluralize }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Port Migration Statistics -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-hdd-network"></i> Port Migration Statistics</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Fiber Ports</h6>
+                    <div class="progress mb-3" style="height: 30px;">
+                        <div class="progress-bar bg-info" role="progressbar" 
+                            style="width: {% widthratio total_fiber_migrated total_fiber_to_migrate 100 %}%">
+                            {{ total_fiber_migrated }} / {{ total_fiber_to_migrate }}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6>UTP Ports</h6>
+                    <div class="progress mb-3" style="height: 30px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {% widthratio total_utp_migrated total_utp_to_migrate 100 %}%">
+                            {{ total_utp_migrated }} / {{ total_utp_to_migrate }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Migration Status Breakdown -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Migration Status Breakdown</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                {% for status, count in status_stats.items %}
+                <div class="col-md-2 mb-3">
+                    <h3 class="mb-0">{{ count }}</h3>
+                    <small class="text-muted">{{ status }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Migrations List -->
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-ul"></i> All Migrations</h5>
+            <a href="{% url 'migrations:create_migration' project.pk %}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus"></i> Add Migration
+            </a>
+        </div>
+        <div class="card-body p-0">
+            {% if migrations %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Old Switch</th>
+                            <th>New Switch</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Scheduled</th>
+                            <th>Fiber Progress</th>
+                            <th>UTP Progress</th>
+                            <th>Assigned To</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mig in migrations %}
+                        <tr>
+                            <td>
+                                <strong>{{ mig.old_switch.hostname }}</strong><br>
+                                <small class="text-muted">{{ mig.old_switch.ip_address }}</small>
+                            </td>
+                            <td>
+                                {% if mig.new_switch %}
+                                <strong>{{ mig.new_switch.hostname }}</strong><br>
+                                <small class="text-muted">{{ mig.new_switch.ip_address }}</small>
+                                {% else %}
+                                <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if mig.migration_status == 'Completed' %}
+                                <span class="badge bg-success">{{ mig.migration_status }}</span>
+                                {% elif mig.migration_status == 'In Progress' %}
+                                <span class="badge bg-primary">{{ mig.migration_status }}</span>
+                                {% elif mig.migration_status == 'Failed' %}
+                                <span class="badge bg-danger">{{ mig.migration_status }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ mig.migration_status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if mig.priority == 'Critical' %}
+                                <span class="badge bg-danger">{{ mig.priority }}</span>
+                                {% elif mig.priority == 'High' %}
+                                <span class="badge bg-warning text-dark">{{ mig.priority }}</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ mig.priority }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ mig.scheduled_date|date:"M d, Y" }}<br>{{ mig.scheduled_date|date:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <small>{{ mig.fiber_ports_migrated }} / {{ mig.fiber_ports_to_migrate }}</small>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-info" 
+                                         style="width: {% widthratio mig.fiber_ports_migrated mig.fiber_ports_to_migrate 100 %}%">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <small>{{ mig.utp_ports_migrated }} / {{ mig.utp_ports_to_migrate }}</small>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-success" 
+                                         style="width: {% widthratio mig.utp_ports_migrated mig.utp_ports_to_migrate 100 %}%">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if mig.assigned_to %}
+                                <small>{{ mig.assigned_to.username }}</small>
+                                {% else %}
+                                <small class="text-muted">Unassigned</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'migrations:migration_detail' mig.pk %}" class="btn btn-info" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'migrations:migration_edit' mig.pk %}" class="btn btn-warning" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-2">No migrations added yet</p>
+                <a href="{% url 'migrations:create_migration' project.pk %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add First Migration
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Timeline (if there are completed migrations) -->
+    {% if timeline_events %}
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Activity</h5>
+        </div>
+        <div class="card-body">
+            <div class="timeline">
+                {% for event in timeline_events %}
+                <div class="d-flex mb-3">
+                    <div class="me-3">
+                        <i class="bi bi-circle-fill text-primary" style="font-size: 0.5rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong>{{ event.title }}</strong>
+                        <span class="badge bg-{{ event.status|lower }} ms-2">{{ event.status }}</span>
+                        <br>
+                        <small class="text-muted">{{ event.date|date:"M d, Y H:i" }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.progress {
+    background-color: #e9ecef;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.timeline {
+    position: relative;
+    padding-left: 20px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2>Edit Port Mapping</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Old Switch Port</h5>
+                <div class="mb-3">
+                    <label>Port Number</label>
+                    <input type="text" name="old_port_number" class="form-control" value="{{ mapping.old_port_number }}" required>
+                </div>
+                <div class="mb-3">
+                    <label>Port Type</label>
+                    <select name="old_port_type" class="form-control" required>
+                        <option value="Fiber" {% if mapping.old_port_type == 'Fiber' %}selected{% endif %}>Fiber</option>
+                        <option value="UTP" {% if mapping.old_port_type == 'UTP' %}selected{% endif %}>UTP</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label>VLAN</label>
+                    <input type="text" name="old_vlan" class="form-control" value="{{ mapping.old_vlan }}">
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h5>New Switch Port</h5>
+                <div class="mb-3">
+                    <label>Port Number</label>
+                    <input type="text" name="new_port_number" class="form-control" value="{{ mapping.new_port_number }}">
+                </div>
+                <div class="mb-3">
+                    <label>Port Type</label>
+                    <select name="new_port_type" class="form-control" required>
+                        <option value="Fiber" {% if mapping.new_port_type == 'Fiber' %}selected{% endif %}>Fiber</option>
+                        <option value="UTP" {% if mapping.new_port_type == 'UTP' %}selected{% endif %}>UTP</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label>New VLAN</label>
+                    <input type="text" name="new_vlan" class="form-control" value="{{ mapping.new_vlan }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label>Connected Device</label>
+                    <input type="text" name="connected_device" class="form-control" value="{{ mapping.connected_device }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label>Department</label>
+                    <input type="text" name="user_department" class="form-control" value="{{ mapping.user_department }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label>Contact</label>
+                    <input type="text" name="user_contact" class="form-control" value="{{ mapping.user_contact }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="is_migrated" class="form-check-input" {% if mapping.is_migrated %}checked{% endif %}>
+                        <label class="form-check-label">Port Migrated</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="is_tested" class="form-check-input" {% if mapping.is_tested %}checked{% endif %}>
+                        <label class="form-check-label">Port Tested</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label>Test Result</label>
+                    <select name="test_result" class="form-control">
+                        <option value="Pending" {% if mapping.test_result == 'Pending' %}selected{% endif %}>Pending</option>
+                        <option value="Pass" {% if mapping.test_result == 'Pass' %}selected{% endif %}>Pass</option>
+                        <option value="Fail" {% if mapping.test_result == 'Fail' %}selected{% endif %}>Fail</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label>Test Notes</label>
+            <textarea name="test_notes" class="form-control" rows="2">{{ mapping.test_notes }}</textarea>
+        </div>
+        
+        <div class="mb-3">
+            <label>Notes</label>
+            <textarea name="notes" class="form-control" rows="3">{{ mapping.notes }}</textarea>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Update Port Mapping</button>
+        <a href="{% url 'migrations:migration_detail' mapping.switch_migration.pk %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
