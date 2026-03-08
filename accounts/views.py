@@ -46,7 +46,7 @@ def user_list(request):
     }
     return render(request, 'accounts/user_list.html', context)
 
-@login_required
+# @login_required
 @user_passes_test(is_admin)
 def user_create(request):
     if request.method == 'POST':
